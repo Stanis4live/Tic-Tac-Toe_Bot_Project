@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from random import choice
 
@@ -18,10 +20,10 @@ class Game(models.Model):
     board = models.CharField(max_length=9, default=' ' * 9)
     is_active = models.BooleanField(default=True)
     against_bot = models.BooleanField(default=False)
+    game_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     def assign_players(self, player1, player2=None):
-        if player2 is None:
-            self.against_bot = True
+        if self.against_bot:
             bot_player = Player.objects.create(is_bot=True)
             players = [player1, bot_player]
         else:
