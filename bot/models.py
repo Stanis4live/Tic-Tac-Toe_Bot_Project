@@ -16,11 +16,18 @@ class Player(models.Model):
 class Game(models.Model):
     player_x = models.ForeignKey(Player, related_name='games_as_x', on_delete=models.SET_NULL, null=True, blank=True)
     player_o = models.ForeignKey(Player, related_name='games_as_o', on_delete=models.SET_NULL, null=True, blank=True)
-    current_turn = models.ForeignKey(related_name='current_turn_games', on_delete=models.SET_NULL, null=True, blank=True)
-    board = models.CharField(max_length=9, default=' ' * 9)
+    current_turn = models.ForeignKey(
+        Player,
+        related_name='current_turn_games',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    board = models.CharField(max_length=25, default=' ' * 9)
     is_active = models.BooleanField(default=True)
     against_bot = models.BooleanField(default=False)
     game_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    board_size = models.IntegerField(default=3)
 
     def assign_players(self, player1, player2=None):
         if self.against_bot:
