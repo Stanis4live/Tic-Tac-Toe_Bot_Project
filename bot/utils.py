@@ -1,15 +1,19 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
+from django.db import models
+from bot.models import Game
+
 
 def get_keyboard(game):
     board = game.board
     size = game.board_size
     buttons = [
-        InlineKeyboardButton(board[i], callback_data=str(i))
+        InlineKeyboardButton(text=board[i], callback_data=str(i))
         if board[i] == ' '
-        else InlineKeyboardButton(board[i], callback_data='ignore')
+        else InlineKeyboardButton(text=board[i], callback_data='ignore')
         for i in range(size ** 2)
     ]
     keyboard = [buttons[i:i + size] for i in range(0, size ** 2, size)]
+
     return InlineKeyboardMarkup(keyboard)
 
 def check_winner(board, size):
@@ -31,4 +35,8 @@ def check_winner(board, size):
             return board[combination[0]]
     return None
 
+def deactivate_other_games(player):
+    Game.objects.filter(is_active=True).filter(
+        models.Q(player_x=player) | models.Q(player_o=player)
+    ).update(is_active=False)
 

@@ -35,8 +35,10 @@ class Game(models.Model):
             players = [player1, bot_player]
         else:
             players = [player1, player2]
-        self.player_x, self.player_o = choice(players), [p for p in players if p != self.player_x][0]
-        self.current_turn = choice([self.player_x, self.player_o])
+        self.player_x = choice(players)
+        players.remove(self.player_x)
+        self.player_o = players[0]
+        self.current_turn = self.player_x
         self.save()
 
     def __str__(self):
