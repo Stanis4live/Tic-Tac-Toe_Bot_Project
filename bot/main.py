@@ -51,9 +51,11 @@ def choose_board_size(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('play_with_'))
 def progress_game_mode(call):
     mode, board_size = call.data.split('_')[2], int(call.data.split('_')[3])
+    user_id = call.from_user.id
+    username = call.from_user.username
 
     if mode == "bot":
-        create_game(call.message, board_size, against_bot=True)
+        create_game(call.message, board_size, against_bot=True, user_id=user_id, username=username)
     elif mode == "human":
         choose_create_or_join(call.message, board_size)
 
