@@ -1,7 +1,8 @@
-import os, sys
+import os, sys, random
 import telebot
 import logging
 import django
+
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'TicTacToeBot.settings')
 django.setup()
@@ -94,7 +95,7 @@ def create_game(message, board_size, against_bot, user_id, username):
     if against_bot:
         game.assign_players(player)
         bot.send_message(message.chat.id,
-                         f"You are playing against a bot on a {board_size}x{board_size} board. Player X turn.")
+                         f"You are playing against a bot on a {board_size}x{board_size} board. Player X turn.", reply_markup=get_keyboard(game))
     else:
         bot.send_message(message.chat.id,
                          f"The game has been created with a {board_size}x{board_size} board. Share this key with another player to connect: \n{game.game_key}")
@@ -129,10 +130,22 @@ def process_game_key(message):
         bot.send_message(message.chat.id, "Game with this key does not exist.")
 
 
+def bot_move(game):
+    available_moves = [i for i, spot in enumerate(game.board) if spot == ' ']
+    if available_moves:
+        move = random.choice(available_moves)  # Выбор случайного свободного места
+        new_board = list(game.board)
+        new_board[move] = 'O'  # Бот играет за 'O'
+        game.board = ''.join(new_board)
+        game.current_turn = game.player_x  # После хода бота очередь игрока
+        game.save()
+
+
 
 @bot.callback_query_handler(func=lambda call: call.data.isdigit())
 def handle_move(call):
     user_id = call.from_user.id
+    logger.info(f"User {user_id} pressed {call.data}")
     player = Player.objects.get(user_id=user_id)
 
     game = (Game.objects.filter(is_active=True, player_x=player).first()
@@ -140,10 +153,12 @@ def handle_move(call):
 
     if not game or game.current_turn != player:
         bot.answer_callback_query(call.id, "It's not your turn.")
+        logger.info(f"Not your turn")
         return
 
     move = int(call.data)
     if game.board[move] == ' ':
+        logging.info(f"Move {call.data} by {user_id}")
         new_board = list(game.board)
         new_board[move] = 'X' if player == game.player_x else 'O'
         game.board = ''.join(new_board)
@@ -152,11 +167,16 @@ def handle_move(call):
     if winner:
         game.is_active = False
         game.save()
+        bot.edit_message_text(text=f"Game over! {winner} wins!\nFinal board:", chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              reply_markup=get_keyboard(game))
         bot.send_message(game.player_x.user_id, f"Game over! {winner} wins!")
-        bot.send_message(game.player_o.user_id, f"Game over! {winner} wins!")
+        if not game.against_bot:
+            bot.send_message(game.player_o.user_id, f"Game over! {winner} wins!")
     elif ' ' not in game.board:
         game.is_active = False
         game.save()
+        bot.edit_message_text(text="It's a draw!\nFinal board:", chat_id=call.message.chat.id, message_id=call.message.message_id,
+                              reply_markup=get_keyboard(game))
         bot.send_message(call.message.chat.id, f"It's a draw!")
     else:
         if game.current_turn == game.player_x:
@@ -164,11 +184,18 @@ def handle_move(call):
         else:
             game.current_turn = game.player_x
         game.save()
-        bot.edit_message_text(text="Next move", chat_id=call.message.chat.id, message_id=call.message.message_id,
-                              reply_markup=get_keyboard(game))
-        bot.send_message(game.current_turn.user_id, f"Your move.", reply_markup=get_keyboard(game))
-        bot.send_message(game.player_x.user_id if game.current_turn == game.player_o else game.player_o.user_id,
-                         "Waiting for opponent's move.")
+        if game.against_bot and game.current_turn == game.player_o:
+            bot_move(game)
+            bot.edit_message_text(text="Bot made a move. Your turn.", chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  reply_markup=get_keyboard(game))
+        else:
+            bot.edit_message_text(text="Next move", chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  reply_markup=get_keyboard(game))
+            bot.send_message(game.current_turn.user_id, f"Your move.", reply_markup=get_keyboard(game))
+            if not game.against_bot:
+                bot.send_message(game.player_x.user_id if game.current_turn == game.player_o else game.player_o.user_id,
+                                 "Waiting for opponent's move.")
+
 
 
 if __name__ == '__main__':

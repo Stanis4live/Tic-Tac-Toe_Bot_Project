@@ -32,12 +32,12 @@ class Game(models.Model):
     def assign_players(self, player1, player2=None):
         if self.against_bot:
             bot_player = Player.objects.create(is_bot=True)
-            players = [player1, bot_player]
+            self.player_o = bot_player
         else:
             players = [player1, player2]
-        self.player_x = choice(players)
-        players.remove(self.player_x)
-        self.player_o = players[0]
+            self.player_x = choice(players)
+            players.remove(self.player_x)
+            self.player_o = players[0]
         self.current_turn = self.player_x
         self.save()
 
