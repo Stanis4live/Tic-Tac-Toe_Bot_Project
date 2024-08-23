@@ -98,7 +98,8 @@ def create_game(message, board_size, against_bot, user_id, username):
                          f"You are playing against a bot on a {board_size}x{board_size} board. Player X turn.", reply_markup=get_keyboard(game))
     else:
         bot.send_message(message.chat.id,
-                         f"The game has been created with a {board_size}x{board_size} board. Share this key with another player to connect: \n{game.game_key}")
+                         f"The game has been created with a {board_size}x{board_size} board. Share this key with another player to connect:")
+        bot.send_message(message.chat.id,f"{game.game_key}")
         bot.register_next_step_handler(message, process_game_key)
 
 
